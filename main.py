@@ -1,17 +1,71 @@
-# import tkinter
 from dataclasses import dataclass
 from enum import Enum
-from typing import Iterator
+from operator import mul
+from typing import (
+    Iterator,
+    NewType,
+    cast,
+)
+from functools import reduce
+
+import msgs
+
+
+DimensionIndexes = NewType('DimensionIndexes', tuple[float, float, float])
+Dimension = tuple[float, float, float]
 
 
 class Position(Enum):
     """6 product positions in the box."""
-    FLAT_ACROS = 1, 2, 0
-    FLAT_ALONG = 2, 1, 0
-    EDGE_ACROSS = 0, 2, 1
-    EDGE_ALONG = 2, 0, 1
-    UP_ACROSS = 0, 1, 2
-    UP_ALONG = 1, 0, 2
+    EDGE_ACROSS = DimensionIndexes((0, 2, 1))
+    EDGE_ALONG = DimensionIndexes((2, 0, 1))
+    FLAT_ACROS = DimensionIndexes((1, 2, 0))
+    FLAT_ALONG = DimensionIndexes((2, 1, 0))
+    UP_ACROSS = DimensionIndexes((0, 1, 2))
+    UP_ALONG = DimensionIndexes((1, 0, 2))
+
+
+pos_translate: dict[Position, str] = {
+    Position.EDGE_ACROSS: 'Боком поперек коробки',
+    Position.EDGE_ALONG: 'Боком вдоль коробки',
+    Position.FLAT_ACROS: 'Плашмя поперек коробки',
+    Position.FLAT_ALONG: 'Плашмя вдоль коробки',
+    Position.UP_ACROSS: 'Стоя поперек коробки',
+    Position.UP_ALONG: 'Стоя вдоль коробки',
+}
+
+
+def get_dimensions(msg: str) -> Dimension | None:
+    """Get correct dimesnions from user or None if just Enter pressed."""
+
+    def dimensions_are_valid() -> bool:
+        """Check all dimensions are positive and len is correct."""
+        nums_gt_zero = True
+        for dim in dimensions:
+            if dim <= 0:
+                nums_gt_zero = False
+        if not nums_gt_zero:
+            print(msgs.NEG_DIMENSIONS)
+        if len(dimensions) != 3:
+            print(msgs.WRONG_ARGS_NUM)
+        return nums_gt_zero and len(dimensions) == 3
+
+    done = False
+    while not done:
+        user_input = input(msg)
+        if not user_input:
+            return None
+        try:
+            dimensions = cast(
+                Dimension,
+                tuple(float(side) for side in user_input.split())
+            )
+            if dimensions_are_valid():
+                done = True
+        except ValueError:
+            print(msgs.WRONG_ARGS)
+
+    return dimensions
 
 
 @dataclass
@@ -21,13 +75,24 @@ class Cuboid:
     width: float
     heigth: float
 
+    @classmethod
+    def create(cls, msg: str):
+        while not (dimensions := get_dimensions(msg)):
+            print(msgs.WRONG_ARGS_NUM)
+        return cls(*dimensions)
+
+    def resize(self, msg: str) -> None:
+        if not (dimensions := get_dimensions(msg)):
+            return
+        self.length, self.width, self.heigth = dimensions
+
 
 @dataclass
 class Product(Cuboid):
 
     def get_dimensions(self, position: Position) -> Iterator[float]:
         '''Get product dimensions in one of 6 positions.'''
-        return (self._sorted_dimensions[ind] for ind in position.value)
+        return (self._sorted_dimensions[ind] for ind in position.value)  # type: ignore  # noqa: E501
 
     @property
     def _sorted_dimensions(self) -> list[float]:
@@ -37,64 +102,58 @@ class Product(Cuboid):
 @dataclass
 class Box(Cuboid):
 
-    product: Product
+    pcs_in_line = 0
+    lines_in_layer = 0
+    layers_in_box = 0
+    total_box_pcs = 0
+    optymal_position = Position.EDGE_ACROSS
 
-    def get_free_space(self, position: Position) -> float:
+    def __post_init__(self):
+        self.product = Product.create(msgs.PROD)
 
-        def get_empty_volume():
-            return sum((
-                free_heigth * self.length * self.width,
-                free_width * self.length * (self.heigth - free_heigth),
-                free_length * (self.width - free_width)
-                * (self.heigth - free_heigth)
-            ))
+    def get_packing(self) -> None:
 
-        prod_dimensions = self.product.get_dimensions(position)
+        def get_position_packing() -> tuple[int, int, int]:
 
-        # free_length = self.length % next(prod_dimensions)
-        # free_width = self.width % next(prod_dimensions)
-        # free_heigth = self.heigth % next(prod_dimensions)
+            prod_dimensions = (self.product.get_dimensions(pos))
 
-        self._lines_in_layer, free_length = divmod(self.length,
-                                                   next(prod_dimensions))
-        self._pcs_in_line, free_width = divmod(self.width,
-                                               next(prod_dimensions))
-        self._layers_in_box, free_heigth = divmod(self.heigth,
-                                                  next(prod_dimensions))
+            lines_in_layer = int(self.length // next(prod_dimensions))
+            pcs_in_line = int(self.width // next(prod_dimensions))
+            layers_in_box = int(self.heigth // next(prod_dimensions))
 
-        return get_empty_volume()
+            return pcs_in_line, lines_in_layer, layers_in_box
 
-    def get_packing(self, position: Position) -> None:
-        pass
+        self.total_box_pcs = 0
 
+        def get_total_amount():
+            return reduce(mul, get_position_packing())
 
-def get_box() -> Box:
+        def set_new_packing():
+            self.pcs_in_line, self.lines_in_layer, self.layers_in_box\
+                = get_position_packing()
+            self.optymal_position = pos
+            self.total_box_pcs = get_total_amount()
 
-    prod_msg = 'Input your product sizes\n'
-    product_dimensions = sorted([float(side)
-                                 for side in input(prod_msg).split()],
-                                reverse=True)
-    box_msg = 'Input your box sizes\n'
-    l, w, h = sorted([float(side) for side in input(box_msg).split()],
-                     reverse=True)
-    product = Product(*product_dimensions)
-    return Box(l, w, h, product)
+        for pos in Position:
+            if get_total_amount() > self.total_box_pcs:
+                set_new_packing()
 
-
-def test_box():
-    return Box(
-        50, 10, 30,
-        Product(7, 2, 4)
-    )
+        print(msgs.RESULT.format(pos=pos_translate[self.optymal_position],
+                                 in_line=self.pcs_in_line,
+                                 lines=self.lines_in_layer,
+                                 layers=self.layers_in_box,
+                                 pcs=self.total_box_pcs))
 
 
-print('Wellcome to box calculator 0.1')
-box = test_box()
-free_spaces = {box.get_free_space(pos): pos for pos in Position}
-result = free_spaces[min(free_spaces)]
-print(result)
+def main():
+    print('Welcome to box calculator 0.1')
+    box = Box.create(msgs.BOX)
+    box.get_packing()
+    while True:
+        box.resize(msgs.SAME_BOX)
+        box.product.resize(msgs.SAME_PROD)
+        box.get_packing()
 
 
-def simple_function():
-    print('I am a very simple function.')
-
+if __name__ == '__main__':
+    main()
