@@ -1,13 +1,11 @@
 from dataclasses import dataclass
 from operator import mul
-from typing import Iterator
+from typing import Iterator, Self, cast
 from functools import reduce
 
-import msgs
+from project_typing import Dimensions, Language, Position
 
-from dimensions import Position
-
-from utils import get_dimensions
+from schemas import Request, Response
 
 
 pos_translate: dict[Position, str] = {
@@ -27,47 +25,50 @@ class Cuboid:
     width: float
     heigth: float
 
-    @classmethod
-    def create(cls, msg: str):
-        while not (dimensions := get_dimensions(msg)):
-            print(msgs.WRONG_ARGS_NUM)
-        return cls(*dimensions)
-
-    def resize(self, msg: str) -> None:
-        if not (dimensions := get_dimensions(msg)):
-            return
-        self.length, self.width, self.heigth = dimensions
-
 
 @dataclass
 class Product(Cuboid):
 
-    def get_dimensions(self, position: Position) -> Iterator[float]:
-        '''Get product dimensions in one of 6 positions.'''
-        return (self._sorted_dimensions[ind] for ind in position.value)  # type: ignore  # noqa: E501
+    def get_pose_dimensions(self, position: Position) -> Iterator[float]:
+        """Get product dimensions in specified positions."""
+        return (self.lwh[ind] for ind in position.value)  # type: ignore  # noqa: E501
 
     @property
-    def _sorted_dimensions(self) -> list[float]:
-        return sorted([self.length, self.width, self.heigth])
+    def lwh(self) -> Dimensions:
+        result = cast(
+            Dimensions,
+            tuple(sorted([self.length, self.width, self.heigth]))
+        )
+        return result
+
+    @classmethod
+    def from_request(cls, request: Request) -> Self:
+        return cls(*request.product_sizes)
 
 
 @dataclass
 class Box(Cuboid):
 
-    pcs_in_line = 0
-    lines_in_layer = 0
+    lng: Language
+    product: Product
+    pcs_in_row = 0
+    rows_in_layer = 0
     layers_in_box = 0
-    total_box_pcs = 0
+    total_amount = 0
     optymal_position = Position.EDGE_ACROSS
 
-    def __post_init__(self):
-        self.product = Product.create(msgs.PROD)
+    @classmethod
+    def from_request(cls, request: Request, product: Product) -> Self:
+        return cls(*request.box_sizes, request.lng, product)
 
-    def get_packing(self) -> None:
+    def get_packing(self) -> Response:
 
-        def get_position_packing() -> tuple[int, int, int]:
+        def get_total_amount():
+            return reduce(mul, get_packing())
 
-            prod_dimensions = (self.product.get_dimensions(pos))
+        def get_packing() -> tuple[int, int, int]:
+
+            prod_dimensions = (self.product.get_pose_dimensions(pos))
 
             lines_in_layer = int(self.length // next(prod_dimensions))
             pcs_in_line = int(self.width // next(prod_dimensions))
@@ -75,23 +76,24 @@ class Box(Cuboid):
 
             return pcs_in_line, lines_in_layer, layers_in_box
 
-        self.total_box_pcs = 0
-
-        def get_total_amount():
-            return reduce(mul, get_position_packing())
-
         def set_new_packing():
-            self.pcs_in_line, self.lines_in_layer, self.layers_in_box\
-                = get_position_packing()
+            self.pcs_in_row, self.rows_in_layer, self.layers_in_box\
+                = get_packing()
             self.optymal_position = pos
-            self.total_box_pcs = get_total_amount()
+            self.total_amount = get_total_amount()
+
+        def get_response() -> Response:
+            return Response(
+                lng=self.lng,
+                optymal_position=self.optymal_position,
+                product_lwh=self.product.lwh,
+                pcs_in_row=self.pcs_in_row,
+                rows_in_layer=self.rows_in_layer,
+                layesr_in_box=self.layers_in_box,
+                )
 
         for pos in Position:
-            if get_total_amount() > self.total_box_pcs:
+            if get_total_amount() > self.total_amount:
                 set_new_packing()
 
-        print(msgs.RESULT.format(pos=pos_translate[self.optymal_position],
-                                 in_line=self.pcs_in_line,
-                                 lines=self.lines_in_layer,
-                                 layers=self.layers_in_box,
-                                 pcs=self.total_box_pcs))
+        return get_response()

@@ -1,16 +1,21 @@
-import msgs
-from classes import Box
+from classes import Box, Product
+
+from schemas import Request, Response
+
+import uvicorn
+
+from fastapi import FastAPI
 
 
-def main():
-    print('Welcome to box calculator 0.1')
-    box = Box.create(msgs.BOX)
-    box.get_packing()
-    while True:
-        box.resize(msgs.SAME_BOX)
-        box.product.resize(msgs.SAME_PROD)
-        box.get_packing()
+app = FastAPI()
+
+
+@app.post('/')
+def calculate(request: Request) -> Response:
+    product = Product.from_request(request)
+    box = Box.from_request(request, product)
+    return box.get_packing()
 
 
 if __name__ == '__main__':
-    main()
+    uvicorn.run(app)

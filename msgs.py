@@ -1,31 +1,59 @@
-from typing import Final
+from typing import Any, Protocol
+
+from project_typing import (
+    Language,
+    Position,
+)
+
+import translators as t
 
 
-_SAME_MSG = 'Если размеры {} не изменились - просто нажмите Enter.\n'
+class _Response(Protocol):
+    """Response protocol."""
 
-BOX: Final[str] = 'Введите длину, ширину и высоту '\
-                  'коробки через пробел и нажмите Enter.\n'
+    lng: Language
+    optymal_position: Position
+    product_lwh: tuple[float, float, float]
+    pcs_in_row: int
+    rows_in_layer: int
+    layesr_in_box: int
 
-SAME_BOX: Final[str] = BOX + _SAME_MSG.format('коробки')
+    @property
+    def total_amount(self) -> int: ...
 
-PROD: Final[str] = 'Введите размеры товара через пробел '\
-                   '(в любой последовательности) и нажмите Enter.\n'
 
-SAME_PROD: Final[str] = PROD + _SAME_MSG.format('товара')
+class MsgGenerator:
+    """Generates response message according to specified language."""
 
-RESULT: Final[str] = """
-Оптимальная укладка: {pos}:
-Уложите {in_line} единиц товара в ряд поперек коробки.
-Уложите {lines} рядов вдоль коробки.
-Уложите {layers} слоев в высоту коробки.
-Общая загрузка коробки: {pcs} штук.
-"""
+    _response_msgs: dict[Language, str] = {
+        Language.en: 'Optimal fit: {}. '
+                     'Put {} pcs in a row across the box. '
+                     'Put {} rows along the box. '
+                     'Put {} layers to the height of the box. '
+                     'Total box loading: {} psc.',
 
-WRONG_ARGS_NUM: Final[str] = 'Нужно ввести 3 целых или '\
-                             'дробных числа через пробел.'
+        Language.ru: 'Оптимальная укладка: {}. '
+                     'Уложите {} единиц товара в ряд поперек коробки. '
+                     'Уложите {} рядов вдоль коробки. '
+                     'Уложите {} слоев в высоту коробки. '
+                     'Общая загрузка коробки: {} штук.'
+    }
 
-WRONG_ARGS: Final[str] = 'Вводить можно только целые или дробные числа. '\
-                         'Дробная часть отделяется точкой.'
+    def __init__(self, response: _Response) -> None:
+        self._response = response
 
-NEG_DIMENSIONS: Final[str] = 'Размеры не могут быть нулевыми '\
-                             'или отрицательными.'
+    def __getattr__(self, __name: str) -> Any:
+        return getattr(self._response, __name)
+
+    def get_response_msg(self) -> str:
+        return self._response_msgs[self.lng].format(
+            self._translator(self.optymal_position),
+            self.pcs_in_row,
+            self.rows_in_layer,
+            self.layesr_in_box,
+            self.total_amount,
+        )
+
+    @property
+    def _translator(self) -> t.BaseTranslator:
+        return t.translators[self.lng]
