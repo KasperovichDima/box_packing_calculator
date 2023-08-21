@@ -1,9 +1,6 @@
 from typing import Any, Protocol
 
-from project_typing import (
-    Language,
-    Position,
-)
+from project_typing import Language
 
 import translators as t
 
@@ -12,7 +9,7 @@ class _Response(Protocol):
     """Response protocol."""
 
     lng: Language
-    optymal_position: Position
+    optymal_position: str
     product_lwh: tuple[float, float, float]
     pcs_in_row: int
     rows_in_layer: int

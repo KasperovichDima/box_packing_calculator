@@ -1,21 +1,15 @@
 from dataclasses import dataclass
-from operator import mul
-from typing import Iterator, Self, cast
 from functools import reduce
+from operator import mul
+from typing import (
+    Iterator,
+    Self,
+    cast,
+)
 
-from project_typing import Dimensions, Language, Position
+import project_typing as t
 
 from schemas import Request, Response
-
-
-pos_translate: dict[Position, str] = {
-    Position.EDGE_ACROSS: 'Боком поперек коробки',
-    Position.EDGE_ALONG: 'Боком вдоль коробки',
-    Position.FLAT_ACROS: 'Плашмя поперек коробки',
-    Position.FLAT_ALONG: 'Плашмя вдоль коробки',
-    Position.UP_ACROSS: 'Стоя поперек коробки',
-    Position.UP_ALONG: 'Стоя вдоль коробки',
-}
 
 
 @dataclass
@@ -29,17 +23,13 @@ class Cuboid:
 @dataclass
 class Product(Cuboid):
 
-    def get_pose_dimensions(self, position: Position) -> Iterator[float]:
-        """Get product dimensions in specified positions."""
-        return (self.lwh[ind] for ind in position.value)  # type: ignore  # noqa: E501
+    def get_pose_dimensions(self, position: t.Position) -> Iterator[float]:
 
-    @property
-    def lwh(self) -> Dimensions:
-        result = cast(
-            Dimensions,
-            tuple(sorted([self.length, self.width, self.heigth]))
-        )
-        return result
+        def get_sorted_lwh():
+            return sorted([self.length, self.width, self.heigth])
+
+        """Get product dimensions in specified positions."""
+        return (get_sorted_lwh()[ind] for ind in position.value)  # type: ignore  # noqa: E501
 
     @classmethod
     def from_request(cls, request: Request) -> Self:
@@ -49,17 +39,25 @@ class Product(Cuboid):
 @dataclass
 class Box(Cuboid):
 
-    lng: Language
+    lng: t.Language
     product: Product
     pcs_in_row = 0
     rows_in_layer = 0
     layers_in_box = 0
     total_amount = 0
-    optymal_position = Position.EDGE_ACROSS
+    optymal_position = t.Position.EDGE_ACROSS
 
     @classmethod
     def from_request(cls, request: Request, product: Product) -> Self:
         return cls(*request.box_sizes, request.lng, product)
+
+    @property
+    def _product_lwh(self) -> t.Dimensions:
+        result = cast(
+            t.Dimensions,
+            tuple(self.product.get_pose_dimensions(self.optymal_position))
+        )
+        return result
 
     def get_packing(self) -> Response:
 
@@ -68,7 +66,7 @@ class Box(Cuboid):
 
         def get_packing() -> tuple[int, int, int]:
 
-            prod_dimensions = (self.product.get_pose_dimensions(pos))
+            prod_dimensions = self.product.get_pose_dimensions(pos)
 
             lines_in_layer = int(self.length // next(prod_dimensions))
             pcs_in_line = int(self.width // next(prod_dimensions))
@@ -85,14 +83,15 @@ class Box(Cuboid):
         def get_response() -> Response:
             return Response(
                 lng=self.lng,
-                optymal_position=self.optymal_position,
-                product_lwh=self.product.lwh,
+                optymal_position=self.optymal_position.name,
+                product_lwh=self._product_lwh,
                 pcs_in_row=self.pcs_in_row,
                 rows_in_layer=self.rows_in_layer,
                 layesr_in_box=self.layers_in_box,
+                total_amount=self.total_amount,
                 )
 
-        for pos in Position:
+        for pos in t.Position:
             if get_total_amount() > self.total_amount:
                 set_new_packing()
 

@@ -1,13 +1,13 @@
-from project_typing import Language, Position
+from project_typing import Language
 
 
 class BaseTranslator:
 
     _dictionary: dict[str, str]
 
-    def __call__(self, position: Position) -> str:
+    def __call__(self, position: str) -> str:
         try:
-            english_name = position.name.replace('_', ' ')
+            english_name = position.replace('_', ' ')
             words = english_name.split()
             return f'{self._dictionary[words[0]]} '\
                    f'{self._dictionary[words[1]]}'
@@ -19,7 +19,7 @@ class RU_Translator(BaseTranslator):
 
     _dictionary: dict[str, str] = dict(
         EDGE='БОКОМ',
-        FLAT='ЛЕЖА',
+        FLAT='ПЛАШМЯ',
         UP='СТОЯ',
         ACROSS='ПОПЕРЕК',
         ALONG='ВДОЛЬ',
