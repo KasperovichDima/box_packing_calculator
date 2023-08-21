@@ -23,7 +23,7 @@ import uvicorn
 app = FastAPI()
 
 
-@app.post('/', response_model=Response)
+@app.post('/calculate', response_model=Response)
 def calculate(request: Annotated[Request, Body(examples=ex.request)]):
     product = Product.from_request(request)
     box = Box.from_request(request, product)
