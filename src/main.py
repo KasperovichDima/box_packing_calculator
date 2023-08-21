@@ -5,7 +5,7 @@ from classes import (
     Product,
 )
 
-import examples as ex
+from examples import request
 
 from fastapi import (
     Body,
@@ -24,7 +24,7 @@ app = FastAPI()
 
 
 @app.post('/calculate', response_model=Response)
-def calculate(request: Annotated[Request, Body(examples=ex.request)]):
+def calculate(request: Annotated[Request, Body(examples=request)]):
     product = Product.from_request(request)
     box = Box.from_request(request, product)
     return box.get_packing()
