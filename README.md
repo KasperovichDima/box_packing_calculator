@@ -1,5 +1,5 @@
 # PREREQUISITES
-1. install **Python 3.11** if not installed
+1. Install **Python 3.11** if not installed
 
 # HOW TO DEPLOY
 2. Download the repo
