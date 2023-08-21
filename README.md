@@ -4,8 +4,8 @@
 # HOW TO DEPLOY
 2. Download the repo
 3. Cd to root app folder on your machine
-4. create virtual environment in root folder using **python3.11 -m venv venv**
-5. activate your virtual environment using **. /venv/bin/activate**
+4. Create virtual environment in root folder using **python3.11 -m venv venv**
+5. Activate your virtual environment using **. /venv/bin/activate**
 6. Make sure you have **pip** installed in your system using **pip --version**
 7. If not - install **pip**
 8. Cd to **/src** folder
