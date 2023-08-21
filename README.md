@@ -7,7 +7,7 @@
 * create virtual environment in root folder using **python3.11 -m venv venv**
 * activate your virtual environment using **. /venv/bin/activate**
 * Make sure you have **pip** installed in your system using **pip --version**
-* If not - install it
+* If not - install **pip**
 * Cd to **/src** folder
 * Install dependencies using **pip install -r requirements.txt**
 * Run app using **uvicorn main:app**
