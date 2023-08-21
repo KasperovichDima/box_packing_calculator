@@ -1,19 +1,19 @@
 # PREREQUISITES
-* install **Python 3.11**
+1. install **Python 3.11** if not installed
 
 # HOW TO DEPLOY
-* Download the repo
-* Cd to root app folder on your machine
-* create virtual environment in root folder using **python3.11 -m venv venv**
-* activate your virtual environment using **. /venv/bin/activate**
-* Make sure you have **pip** installed in your system using **pip --version**
-* If not - install **pip**
-* Cd to **/src** folder
-* Install dependencies using **pip install -r requirements.txt**
-* Run app using **uvicorn main:app**
+2. Download the repo
+3. Cd to root app folder on your machine
+4. create virtual environment in root folder using **python3.11 -m venv venv**
+5. activate your virtual environment using **. /venv/bin/activate**
+6. Make sure you have **pip** installed in your system using **pip --version**
+7. If not - install **pip**
+8. Cd to **/src** folder
+9. Install dependencies using **pip install -r requirements.txt**
+10. Run app using **uvicorn main:app**
 
 # HOW TO USE
-* When your app is running, open your browser and open **http://127.0.0.1:8000/docs**
-* Click on **/calculate** endpoint
-* You can see an endpoint description with request and responde examples
-* Enjoy!
+11. When your app is running, open your browser and open **http://127.0.0.1:8000/docs**
+12. Click on **/calculate** endpoint
+13. You can see an endpoint description with request and response examples
+14. Enjoy!
